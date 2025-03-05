@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>PI-Chatbot</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/a11y-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+</head>
+
+<body>
+  <div class="container mt-5">
+    <h1>PI GPT</h1>
+    <div class="chat-box mt-3"></div>
+    <div class="form-group mt-3">
+      <textarea class="form-control" rows="3" placeholder="Enter your prompt here" id="message-input"></textarea>
+    </div>
+    <button type="button" class="btn btn-primary" id="send-btn">Send</button>
+  </div>
+
+  <div id="user-icon-url" data-url="{{ url_for('static', filename='images/user.jpg') }}" hidden></div>
+  <div id="bot-icon-url" data-url="{{ url_for('static', filename='images/gpt.jpeg') }}" hidden></div>
+
+  <script>
+    setInterval(() => {
+      document.querySelectorAll("pre code").forEach(block => hljs.highlightElement(block));
+    }, 1000);
+
+    const chatBox = document.querySelector(".chat-box");
+    const messageInput = document.querySelector("#message-input");
+    const sendBtn = document.querySelector("#send-btn");
+    const userIconUrl = document.getElementById("user-icon-url").getAttribute("data-url");
+    const botIconUrl = document.getElementById("bot-icon-url").getAttribute("data-url");
+
+    function addMessage(message, isUserMessage) {
+      const messageDiv = document.createElement("div");
+      messageDiv.classList.add("mt-3", "p-3", "rounded", isUserMessage ? "user-message" : "bot-message");
+      const iconUrl = isUserMessage ? userIconUrl : botIconUrl;
+      messageDiv.innerHTML = `<img src="${iconUrl}" class="${isUserMessage ? 'user-icon' : 'bot-icon'}"><p>${message}</p>`;
+      chatBox.appendChild(messageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sendMessage() {
+    const message = messageInput.value.trim();
+    if (message === "") return;
+
+    addMessage(message, true);
+
+    fetch("http://127.0.0.1:5000/api", {   // Ensure Flask URL is correct
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message })   // Send JSON correctly
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        messageInput.value = "";
+        const botResponse = data.response || "Error: No response received";
+        addMessage(botResponse, false);
+    })
+    .catch(error => console.error("Error:", error));
+}
+
+    sendBtn.addEventListener("click", sendMessage);
+    messageInput.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
